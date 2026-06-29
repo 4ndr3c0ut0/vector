@@ -1,0 +1,7 @@
+bin
+tmp
+*.log
+.DS_Store
+.git
+Dockerfile
+.dockerignore
