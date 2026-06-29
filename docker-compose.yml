@@ -1,17 +1,53 @@
 services:
+  # O JOGO. Sobe sozinho com: docker compose up -d  ->  http://localhost:8080
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Vazio = jogo 100% offline. Aponte para a API se quiser ranking online,
+        # ex.: VITE_API_URL=http://localhost:8081 docker compose up --build
+        VITE_API_URL: ${VITE_API_URL:-}
+    image: vector-frontend
+    container_name: vector-frontend
+    ports:
+      # Porta do host configuravel: FRONTEND_PORT=9000 docker compose up -d
+      - "${FRONTEND_PORT:-8080}:80"
+    restart: unless-stopped
+
+  # API e banco sao opcionais (esqueleto MVP 2). Sobem so com o perfil "full":
+  #   docker compose --profile full up -d --build
+  backend:
+    build:
+      context: ./backend
+    image: vector-backend
+    container_name: vector-backend
+    profiles: ["full"]
+    environment:
+      PORT: "8080"
+      ENV: ${BACKEND_ENV:-production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      DATABASE_URL: "postgres://${POSTGRES_USER:-vector}:${POSTGRES_PASSWORD:-vector}@postgres:5432/${POSTGRES_DB:-vector}?sslmode=disable"
+    ports:
+      - "${BACKEND_PORT:-8081}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     container_name: vector-postgres
+    profiles: ["full"]
     environment:
-      POSTGRES_DB: vector
-      POSTGRES_USER: vector
-      POSTGRES_PASSWORD: vector
+      POSTGRES_DB: ${POSTGRES_DB:-vector}
+      POSTGRES_USER: ${POSTGRES_USER:-vector}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vector}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - vector-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vector -d vector"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vector} -d ${POSTGRES_DB:-vector}"]
       interval: 5s
       timeout: 5s
       retries: 10
