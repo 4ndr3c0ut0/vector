@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vector-postgres
+    environment:
+      POSTGRES_DB: vector
+      POSTGRES_USER: vector
+      POSTGRES_PASSWORD: vector
+    ports:
+      - "5432:5432"
+    volumes:
+      - vector-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vector -d vector"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  vector-postgres-data:
